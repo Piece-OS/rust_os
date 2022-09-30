@@ -13,9 +13,22 @@ use rust_os::println;
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
+    rust_os::init();
+
+    fn stack_overflow() { stack_overflow(); }
+    
+    // trigger a stack overflow
+    stack_overflow();
+    
+    /* trigger as page fault */
+    // unsafe { *(0xacabbabe as *mut u64) = 42; };
+    /* invoke a breakpoint exception */
+    // x86_64::instructions::interrupts::int3();
+
     #[cfg(test)]
     test_main();
 
+    println!("It did not crash!");
     loop {}
 }
 
