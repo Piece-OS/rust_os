@@ -28,7 +28,19 @@ pub extern "C" fn _start() -> ! {
     test_main();
 
     println!("It did not crash!");
-    loop {}
+    loop {
+        /* provoking deadlock */
+        /* to prevent deadlock
+         * we disable interrupts
+         *  during print
+         * disabling interrupts
+         *  should only be
+         *  used in wost-
+         *  case scenarios */
+        for _ in 0 .. 10000 {}
+        use rust_os::print;
+        print!("-");
+    }
 }
 
 #[cfg(not(test))]
