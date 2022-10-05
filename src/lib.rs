@@ -12,6 +12,9 @@ pub mod interrupts;
 pub mod serial;
 pub mod vga_buffer;
 
+/* stop using the cpu until interrupted */
+pub fn hlt_loop() -> ! {loop { x86_64::instructions::hlt(); }}
+
 pub fn init() {
     gdt::init();
     interrupts::init_idt();
@@ -46,7 +49,8 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
-    loop{}
+    hlt_loop();
+    //loop{}
 }
 
 #[cfg(test)]
@@ -54,7 +58,8 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
 pub extern "C" fn _start() -> ! {
     init();
     test_main();
-    loop {}
+    hlt_loop();
+    //loop {}
 }
 
 #[cfg(test)]
