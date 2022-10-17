@@ -6,61 +6,29 @@
 
 #![reexport_test_harness_main = "test_main"]
 
+use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;
 use rust_os::println;
 
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    println!("Hello World{}", "!");
+entry_point!(kernel_main);
 
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    use rust_os::memory::{self, BootInfoFrameAllocator};
+    use x86_64::{structures::paging::Page, VirtAddr};
+
+    println!("Hello World{}", "!");
     rust_os::init();
 
-    /* reading the page tables */
-    //use x86_64::registers::control::Cr3;
-    //let (level_4_page_table, _) = Cr3::read();
-
-    //println!("Level 4 page table at: {:?}", level_4_page_table.start_address());
-
-
-    /* trigger as page fault */
-    // let ptr = 0xACABbabe as *mut u32
-    // let ptr = 0x205546 as *mut u32;
-    
-    /* read from a code page */
-    // unsafe { let x = *ptr; }
-    // println!("read worked");
-    
-    /* write to a code page */
-    // unsafe { *ptr = 42; };
-    // println!("write worked");
-    
-
-    /* trigger a stack overflow */
-    // fn stack_overflow() { stack_overflow(); }
-    // stack_overflow();
-    
-
-    /* invoke a breakpoint exception */
-    // x86_64::instructions::interrupts::int3();
+    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    let mut mapper = unsafe { memory::init(phys_mem_offset) };
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
 
     #[cfg(test)]
     test_main();
 
     println!("It did not crash!");
     rust_os::hlt_loop();
-    /* provoking deadlock */
-    /* to prevent deadlock
-     * we disable interrupts
-     *  during print
-     * disabling interrupts
-     *  should only be
-     *  used in wost-
-     *  case scenarios */
-    // loop {
-        // for _ in 0 .. 10000 {}
-        // use rust_os::print;
-        // print!("-");
-    // }
+
 }
 
 #[cfg(not(test))]
@@ -68,7 +36,6 @@ pub extern "C" fn _start() -> ! {
 fn panic(info: &PanicInfo)  -> ! {
     println!("{}", info);
     rust_os::hlt_loop();
-    //loop {}
 }
 
 #[cfg(test)]
