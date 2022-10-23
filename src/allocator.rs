@@ -11,6 +11,7 @@ pub const HEAP_SIZE:  usize = 100 * 1024; // 100 KiB
 
 pub mod bump;
 pub mod linked_list;
+pub mod fixed_size_block;
 
 use linked_list::LinkedListAllocator;
 
