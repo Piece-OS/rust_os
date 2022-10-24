@@ -17,7 +17,7 @@ fn list_index(layout: &Layout) -> Option<usize> {
 }
 
 struct ListNode { next: Option<&'static mut ListNode> }
-pub struct FixedSizeAllocator {
+pub struct FixedSizeBlockAllocator {
     list_heads: [Option<&'static mut ListNode>; BLOCK_SIZES.len()],
     fallback_allocator: linked_list_allocator::Heap,
 }
@@ -26,16 +26,16 @@ impl FixedSizeBlockAllocator {
     /// Creates an empty FixedSizeBlockAllocator.
     pub const fn new() -> Self {
         const EMPTY: Option<&'static mut ListNode> = None;
-        FixedSizedBlockAllocator {
+        FixedSizeBlockAllocator {
             list_heads: [EMPTY; BLOCK_SIZES.len()],
             fallback_allocator: linked_list_allocator::Heap::empty(),
         }
     }
     /// Allocates using the fallback allocator.
     fn fallback_alloc(&mut self, layout: Layout) -> *mut u8 {
-        match self.fallback.allocator.allocate_first_fit(layout) {
-            Ok(ptr) -> ptr.as_ptr(),
-            Err(_) -> ptr::null_mut(),
+        match self.fallback_allocator.allocate_first_fit(layout) {
+            Ok(ptr) => ptr.as_ptr(),
+            Err(_) => ptr::null_mut(),
         }
     }
     /// Initialize the allocator with the given heap bounds.
@@ -43,7 +43,7 @@ impl FixedSizeBlockAllocator {
     /// This function is unsafe because the caller must guarentee that the given
     /// heap bounds are valid and that the heap is unused.  This mehtod mus be
     /// called only once.
-    pub unsafe fn init (&mut self, heap_start, heap_size) {
+    pub unsafe fn init (&mut self, heap_start: usize, heap_size: usize) {
         self.fallback_allocator.init(heap_start, heap_size);
     }
 }
@@ -78,7 +78,7 @@ unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
         let mut allocator = self.lock();
         match list_index(&layout) {
             Some (index) => {
-                let new_node = ListNode { next: allocator.list_heads.[index].take() };
+                let new_node = ListNode { next: allocator.list_heads[index].take() };
                 // verify that block has size and alignment required for storing mode
                 assert!(mem::size_of::<ListNode>() <= BLOCK_SIZES[index]);
                 assert!(mem::align_of::<ListNode>() <= BLOCK_SIZES[index]);
