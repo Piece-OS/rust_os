@@ -11,7 +11,7 @@ extern crate alloc;
 use alloc::{boxed::Box, vec, vec::Vec, rc::Rc};
 use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;
-use rust_os::println;
+use rust_os::{println, task::{keyboard, Task, simple_executor::SimpleExecutor}};
 
 entry_point!(kernel_main);
 
@@ -45,6 +45,12 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     println!("current reference count is {}", Rc::strong_count(&cloned_reference));
     core::mem::drop(reference_counted);
     println!("reference count is {} now", Rc::strong_count(&cloned_reference));
+
+    // cylce through polling each task until they are all completed
+    let mut executor = SimpleExecutor::new();
+    executor.spawn(Task::new(example_task()));
+    executor.spawn(Task::new(keyboard::print_keypresses()));
+    executor.run();
 
     #[cfg(test)]
     test_main();
